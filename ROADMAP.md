@@ -10,10 +10,10 @@ Legend: [ ] todo, [x] done
 ## Milestone 1: MVP (scrape, API, ledger)
 
 ### Phase 1: Core scraper
-- [ ] Project setup (uv, ruff, mypy, pytest, pre-commit)
-- [ ] Fetcher (timeouts, size limits, redirects, retries)
-- [ ] SSRF protection (private/loopback/metadata IPs, redirect re-checks)
-- [ ] robots.txt support with per-origin cache
+- [x] Project setup (uv, ruff, mypy, pytest, pre-commit)
+- [ ] Fetcher (timeouts, size limits, redirects, retries) — retries not implemented yet
+- [x] SSRF protection (private/loopback/metadata IPs, redirect re-checks) — incl. DNS-rebinding pinning
+- [x] robots.txt support with per-origin cache
 - [ ] Main-content extraction, metadata, links
 - [ ] Markdown + cleaned HTML output, content hash
 - [ ] CLI: `python -m app.cli scrape <url>`
