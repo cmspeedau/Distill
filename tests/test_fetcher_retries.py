@@ -66,6 +66,27 @@ def test_numeric_retry_after_is_honored(monkeypatch):
     assert sleeps == [3.0]
 
 
+@pytest.mark.parametrize(
+    ("header", "expected"),
+    [("999999", fetcher._MAX_RETRY_DELAY), ("-5", 0.0)],
+)
+def test_retry_after_is_clamped(monkeypatch, header, expected):
+    sleeps = []
+    monkeypatch.setattr(fetcher.time, "sleep", sleeps.append)
+    with respx.mock(assert_all_called=True) as router:
+        route = router.get("https://example.com/").mock(
+            side_effect=[
+                httpx.Response(429, headers={"Retry-After": header}),
+                httpx.Response(200, text="ok"),
+            ]
+        )
+        result = fetch("https://example.com/")
+
+    assert result.status_code == 200
+    assert route.call_count == 2
+    assert sleeps == [expected]
+
+
 def test_robots_denial_is_not_retried(monkeypatch):
     monkeypatch.setattr(get_settings(), "respect_robots", True)
     fetcher._robots_cache.clear()

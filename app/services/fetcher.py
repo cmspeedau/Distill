@@ -17,6 +17,7 @@ ROBOTS_CACHE_TTL = 3600  # seconds (1 hour)
 _RETRY_STATUS_CODES = frozenset({429, 502, 503, 504})
 _MAX_ATTEMPTS = 3
 _RETRY_BACKOFF = 0.5
+_MAX_RETRY_DELAY = 30.0  # cap on any single sleep, including server-supplied Retry-After
 
 
 def _get_with_retries(client: httpx.Client, url: str) -> httpx.Response:
@@ -24,7 +25,7 @@ def _get_with_retries(client: httpx.Client, url: str) -> httpx.Response:
     for attempt in range(_MAX_ATTEMPTS):
         try:
             response = client.get(url)
-        except (httpx.TimeoutException, httpx.TransportError):
+        except httpx.TransportError:
             if attempt == _MAX_ATTEMPTS - 1:
                 raise
             time.sleep(_RETRY_BACKOFF * (2**attempt))
@@ -40,6 +41,8 @@ def _get_with_retries(client: httpx.Client, url: str) -> httpx.Response:
             delay = float(retry_after) if retry_after is not None else _RETRY_BACKOFF * (2**attempt)
         except ValueError:
             delay = _RETRY_BACKOFF * (2**attempt)
+        # Server-controlled value: clamp so it can neither stall us nor go negative.
+        delay = min(max(delay, 0.0), _MAX_RETRY_DELAY)
         time.sleep(delay)
 
     raise AssertionError("unreachable")
