@@ -28,7 +28,11 @@ def page_handler(robots_status=404, robots_body="", page_status=200):
             return httpx.Response(robots_status, text=robots_body)
         if request.url.path == "/start":
             return httpx.Response(301, headers={"location": "/end"})
-        return httpx.Response(page_status, text="<html>hi</html>", headers={"content-type": "text/html"})
+        return httpx.Response(
+            page_status,
+            text="<html>hi</html>",
+            headers={"content-type": "text/html"},
+        )
 
     return handler
 
