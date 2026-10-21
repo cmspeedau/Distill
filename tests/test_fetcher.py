@@ -2,7 +2,7 @@ import httpx
 import pytest
 
 from app.services import url_guard
-from app.services.fetcher import MAX_REDIRECTS, FetchError, fetch
+from app.services.fetcher import FetchError, fetch
 
 
 @pytest.fixture(autouse=True)
