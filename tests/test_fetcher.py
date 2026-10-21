@@ -178,3 +178,33 @@ def test_dns_rebinding_blocked(monkeypatch):
     with pytest.raises(url_guard.UnsafeURLError):
         fetch("https://rebind.example/", client=make_client(handler))
     assert "127.0.0.1" not in requested_hosts
+
+
+def test_dns_rebinding_on_redirect_blocked(monkeypatch):
+    # The first hop keeps resolving public; the redirect target answers the
+    # validation lookup with a public IP, then rebinds to loopback at
+    # connection time — only a connect-time re-check of every hop catches this.
+    rebind_answers = iter([["93.184.216.34"]])
+
+    def resolve(host):
+        if host == "rebind.example":
+            try:
+                return next(rebind_answers)
+            except StopIteration:
+                return ["127.0.0.1"]
+        return ["93.184.216.34"]
+
+    monkeypatch.setattr(url_guard, "resolve_host", resolve)
+    served_paths: list[str] = []
+
+    def handler(request):
+        served_paths.append(request.url.path)
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404)
+        if request.url.path == "/start":
+            return httpx.Response(302, headers={"location": "https://rebind.example/admin"})
+        return httpx.Response(200, text="secret")
+
+    with pytest.raises(url_guard.UnsafeURLError):
+        fetch("https://first.example/start", client=make_client(handler))
+    assert "/admin" not in served_paths
