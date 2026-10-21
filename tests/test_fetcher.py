@@ -1,8 +1,9 @@
 import httpx
 import pytest
 
-from app.services import url_guard
-from app.services.fetcher import FetchError, fetch
+from app.config import get_settings
+from app.services import fetcher, url_guard
+from app.services.fetcher import BlockedByRobots, FetchError, fetch
 
 
 @pytest.fixture(autouse=True)

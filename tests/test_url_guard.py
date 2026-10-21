@@ -10,7 +10,8 @@ def no_real_dns(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "url", ["ftp://example.com/x", "file:///etc/passwd", "javascript:alert(1)"]
+    "url",
+    ["ftp://example.com/x", "file:///etc/passwd", "javascript:alert(1)"],
 )
 def test_rejects_non_http_schemes(url):
     with pytest.raises(UnsafeURLError):
