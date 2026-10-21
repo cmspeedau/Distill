@@ -9,7 +9,10 @@ def no_real_dns(monkeypatch):
     monkeypatch.setattr(url_guard, "resolve_host", lambda host: ["93.184.216.34"])
 
 
-@pytest.mark.parametrize("url", ["ftp://example.com/x", "file:///etc/passwd", "javascript:alert(1)"])
+@pytest.mark.parametrize(
+    "url",
+    ["ftp://example.com/x", "file:///etc/passwd", "javascript:alert(1)"],
+)
 def test_rejects_non_http_schemes(url):
     with pytest.raises(UnsafeURLError):
         validate_url(url)
