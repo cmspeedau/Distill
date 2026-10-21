@@ -154,3 +154,27 @@ def test_robots_cached_per_origin(monkeypatch):
     fetch("https://example.com/a", client=client)
     fetch("https://example.com/b", client=client)
     assert robots_calls == 1
+
+
+def test_dns_rebinding_blocked(monkeypatch):
+    # First lookup (validation) returns a public IP; any later lookup returns loopback.
+    answers = iter([["93.184.216.34"]])
+
+    def rebinding_resolve(host):
+        try:
+            return next(answers)
+        except StopIteration:
+            return ["127.0.0.1"]
+
+    monkeypatch.setattr(url_guard, "resolve_host", rebinding_resolve)
+    requested_hosts: list[str] = []
+
+    def handler(request):
+        requested_hosts.append(request.url.host)
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404)
+        return httpx.Response(200, text="secret")
+
+    with pytest.raises(url_guard.UnsafeURLError):
+        fetch("https://rebind.example/", client=make_client(handler))
+    assert "127.0.0.1" not in requested_hosts

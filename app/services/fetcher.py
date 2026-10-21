@@ -9,7 +9,7 @@ from urllib.robotparser import RobotFileParser
 import httpx
 
 from app.config import get_settings
-from app.services.url_guard import validate_url
+from app.services.url_guard import resolve_and_pin, validate_url
 
 # Fixed for now. Will be replaced by an admin-configurable setting later.
 MAX_REDIRECTS = 5
@@ -31,6 +31,46 @@ class FetchResult:
     status_code: int
     content_type: str
     body: bytes
+
+
+class PinnedTransport(httpx.BaseTransport):
+    """Wrapper transport that closes the DNS-rebinding window.
+
+    URL validation and the HTTP client's own DNS lookup are two separate
+    resolutions, and a hostile TTL-0 zone can answer them differently: public
+    IP first, loopback second. This transport re-resolves at connection time,
+    validates the answer, and rewrites the request to dial the validated IP
+    directly. The original hostname is kept in the ``Host`` header (httpx sets
+    it before the rewrite) and in the TLS SNI/verification name through
+    httpcore's ``sni_hostname`` request extension.
+    """
+
+    def __init__(self, inner: httpx.BaseTransport | None = None) -> None:
+        self._inner = inner if inner is not None else httpx.HTTPTransport()
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        target = resolve_and_pin(str(request.url))
+        pinned_host = f"[{target.ip}]" if ":" in target.ip else target.ip
+        if request.url.host != pinned_host:
+            # Dial the validated address directly (IPv6 hosts need brackets).
+            request.url = request.url.copy_with(host=pinned_host)
+        request.extensions["sni_hostname"] = target.host
+        return self._inner.handle_request(request)
+
+    def close(self) -> None:
+        self._inner.close()
+
+
+def _ensure_pinned(client: httpx.Client) -> None:
+    """Force every request the client sends through a PinnedTransport.
+
+    httpx exposes no public accessor for a client's transport; patching the
+    private attribute is the only way to guarantee caller-supplied clients are
+    pinned too, so the SSRF check cannot be bypassed by passing a custom client.
+    """
+    transport = client._transport  # noqa: SLF001 - no public accessor in httpx
+    if not isinstance(transport, PinnedTransport):
+        client._transport = PinnedTransport(inner=transport)  # noqa: SLF001
 
 
 @dataclass
@@ -97,6 +137,7 @@ def fetch(url: str, client: httpx.Client | None = None) -> FetchResult:
         follow_redirects=False,
         headers={"User-Agent": settings.user_agent},
     )
+    _ensure_pinned(client)
     try:
         current = validate_url(url)
         if settings.respect_robots and not check_robots(current, client):
