@@ -11,7 +11,7 @@ class UnsafeURLError(ValueError):
     """Raised when a URL is not safe to fetch."""
 
 
-def _is_blocked_address(ip: ipaddress._BaseAddress) -> bool:
+def _is_blocked_address(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     return (
         ip.is_private
         or ip.is_loopback
@@ -25,7 +25,7 @@ def _is_blocked_address(ip: ipaddress._BaseAddress) -> bool:
 def resolve_host(host: str) -> list[str]:
     """Return all IP addresses for a host. Separated out so tests can mock DNS."""
     infos = socket.getaddrinfo(host, None)
-    return [info[4][0] for info in infos]
+    return [str(info[4][0]) for info in infos]
 
 
 def validate_url(url: str) -> str:
