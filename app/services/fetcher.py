@@ -14,6 +14,35 @@ from app.services.url_guard import resolve_and_pin, validate_url
 # Fixed for now. Will be replaced by an admin-configurable setting later.
 MAX_REDIRECTS = 5
 ROBOTS_CACHE_TTL = 3600  # seconds (1 hour)
+_RETRY_STATUS_CODES = frozenset({429, 502, 503, 504})
+_MAX_ATTEMPTS = 3
+_RETRY_BACKOFF = 0.5
+
+
+def _get_with_retries(client: httpx.Client, url: str) -> httpx.Response:
+    """GET a page or redirect hop, retrying transient failures."""
+    for attempt in range(_MAX_ATTEMPTS):
+        try:
+            response = client.get(url)
+        except (httpx.TimeoutException, httpx.TransportError):
+            if attempt == _MAX_ATTEMPTS - 1:
+                raise
+            time.sleep(_RETRY_BACKOFF * (2**attempt))
+            continue
+
+        if response.status_code not in _RETRY_STATUS_CODES:
+            return response
+        if attempt == _MAX_ATTEMPTS - 1:
+            return response
+
+        retry_after = response.headers.get("retry-after")
+        try:
+            delay = float(retry_after) if retry_after is not None else _RETRY_BACKOFF * (2**attempt)
+        except ValueError:
+            delay = _RETRY_BACKOFF * (2**attempt)
+        time.sleep(delay)
+
+    raise AssertionError("unreachable")
 
 
 class FetchError(Exception):
@@ -144,7 +173,7 @@ def fetch(url: str, client: httpx.Client | None = None) -> FetchResult:
             raise BlockedByRobots(f"disallowed by robots.txt: {current}")
 
         for _ in range(MAX_REDIRECTS + 1):
-            response = client.get(current)
+            response = _get_with_retries(client, current)
             if response.is_redirect:
                 location = response.headers.get("location")
                 if not location:
