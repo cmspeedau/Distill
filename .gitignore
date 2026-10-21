@@ -22,6 +22,15 @@ build/
 .env.*
 !.env.example
 
+# Frontend (Phase 2+, when frontend/ lands)
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Logs
+*.log
+
 # Local data
 data/
 *.db
