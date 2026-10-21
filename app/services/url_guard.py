@@ -6,13 +6,15 @@ from urllib.parse import urlparse
 
 ALLOWED_SCHEMES = frozenset({"http", "https"})
 
+IPAddress = ipaddress.IPv4Address | ipaddress.IPv6Address
+
 
 class UnsafeURLError(ValueError):
     """Raised when a URL is not safe to fetch."""
 
 
-def _is_blocked_address(ip: ipaddress._BaseAddress) -> bool:
-    return (
+def _is_blocked_address(ip: IPAddress) -> bool:
+    return bool(
         ip.is_private
         or ip.is_loopback
         or ip.is_link_local
@@ -25,7 +27,8 @@ def _is_blocked_address(ip: ipaddress._BaseAddress) -> bool:
 def resolve_host(host: str) -> list[str]:
     """Return all IP addresses for a host. Separated out so tests can mock DNS."""
     infos = socket.getaddrinfo(host, None)
-    return [info[4][0] for info in infos]
+    addresses: list[str] = [str(info[4][0]) for info in infos]
+    return addresses
 
 
 def validate_url(url: str) -> str:
@@ -38,11 +41,11 @@ def validate_url(url: str) -> str:
 
     host = parsed.hostname
     try:
-        literal = ipaddress.ip_address(host)
+        literal: IPAddress | None = ipaddress.ip_address(host)
     except ValueError:
         literal = None
 
-    addresses = [str(literal)] if literal else resolve_host(host)
+    addresses: list[str] = [str(literal)] if literal else resolve_host(host)
     if not addresses:
         raise UnsafeURLError(f"host did not resolve: {host}")
 
