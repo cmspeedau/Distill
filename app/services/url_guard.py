@@ -2,6 +2,7 @@
 
 import ipaddress
 import socket
+from dataclasses import dataclass
 from urllib.parse import urlparse
 
 ALLOWED_SCHEMES = frozenset({"http", "https"})
@@ -11,6 +12,17 @@ IPAddress = ipaddress.IPv4Address | ipaddress.IPv6Address
 
 class UnsafeURLError(ValueError):
     """Raised when a URL is not safe to fetch."""
+
+
+@dataclass(frozen=True)
+class PinnedTarget:
+    """A validated URL together with the single public IP it must connect to."""
+
+    url: str
+    host: str
+    ip: str
+    port: int
+    scheme: str
 
 
 def _is_blocked_address(ip: IPAddress) -> bool:
@@ -33,6 +45,17 @@ def resolve_host(host: str) -> list[str]:
 
 def validate_url(url: str) -> str:
     """Raise UnsafeURLError unless the URL is http(s) and resolves only to public addresses."""
+    resolve_and_pin(url)
+    return url
+
+
+def resolve_and_pin(url: str) -> PinnedTarget:
+    """Validate a URL and pin it to one public IP.
+
+    Every resolved address is checked; if any is blocked, the URL is rejected.
+    The returned IP is the one the connection must use, so a second DNS lookup
+    by the HTTP client cannot return a different (internal) address.
+    """
     parsed = urlparse(url)
     if parsed.scheme not in ALLOWED_SCHEMES:
         raise UnsafeURLError(f"scheme not allowed: {parsed.scheme!r}")
@@ -53,4 +76,11 @@ def validate_url(url: str) -> str:
         if _is_blocked_address(ipaddress.ip_address(addr)):
             raise UnsafeURLError(f"host resolves to a blocked address: {addr}")
 
-    return url
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    return PinnedTarget(
+        url=url,
+        host=host,
+        ip=addresses[0],
+        port=port,
+        scheme=parsed.scheme,
+    )
