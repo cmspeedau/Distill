@@ -11,7 +11,7 @@ Legend: [ ] todo, [x] done
 
 ### Phase 1: Core scraper
 - [x] Project setup (uv, ruff, mypy, pytest, pre-commit)
-- [ ] Fetcher (timeouts, size limits, redirects, retries) — retries not implemented yet
+- [x] Fetcher (timeouts, size limits, redirects, retries) — incl. Retry-After clamping
 - [x] SSRF protection (private/loopback/metadata IPs, redirect re-checks) — incl. DNS-rebinding pinning
 - [x] robots.txt support with per-origin cache
 - [ ] Main-content extraction, metadata, links
