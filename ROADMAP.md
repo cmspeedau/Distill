@@ -11,17 +11,17 @@ Legend: [ ] todo, [x] done
 
 ### Phase 1: Core scraper
 - [x] Project setup (uv, ruff, mypy, pytest, pre-commit)
-- [ ] Fetcher (timeouts, size limits, redirects, retries) — retries not implemented yet
+- [x] Fetcher (timeouts, size limits, redirects, retries)
 - [x] SSRF protection (private/loopback/metadata IPs, redirect re-checks) — incl. DNS-rebinding pinning
 - [x] robots.txt support with per-origin cache
-- [ ] Main-content extraction, metadata, links
-- [ ] Markdown + cleaned HTML output, content hash
-- [ ] CLI: `python -m app.cli scrape <url>`
+- [x] Main-content extraction, metadata, links
+- [x] Markdown + cleaned HTML output, content hash
+- [x] CLI: `python -m app.cli scrape <url>`
 
 ### Phase 2: REST API + React input page
-- [ ] FastAPI app, `POST /scrape`, `GET /health`
-- [ ] Pydantic request/response schemas, error mapping
-- [ ] React + Vite UI: URL input, options, rendered Markdown result
+- [x] FastAPI app, `POST /scrape`, `GET /health`
+- [x] Pydantic request/response schemas, error mapping
+- [x] React + Vite UI: URL input, options, rendered Markdown result
 
 ### Phase 3: Persistence
 - [ ] SQLAlchemy models + Alembic migrations
