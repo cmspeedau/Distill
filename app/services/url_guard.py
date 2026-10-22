@@ -61,6 +61,8 @@ def resolve_and_pin(url: str) -> PinnedTarget:
         raise UnsafeURLError(f"scheme not allowed: {parsed.scheme!r}")
     if not parsed.hostname:
         raise UnsafeURLError("URL has no host")
+    if parsed.username is not None or parsed.password is not None:
+        raise UnsafeURLError("URL credentials are not allowed")
 
     host = parsed.hostname
     try:

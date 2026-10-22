@@ -17,7 +17,7 @@ Self-hosted web scraper with a dashboard, a REST API, and an MCP server for AI t
 
 </div>
 
-> **Status:** early development. The roadmap is written; code lands phase by phase. Everything below describes the target design, not what works today.
+> **Status:** early development. Phases 1–2 provide a scraper CLI, REST API, and React input UI; persistence and ledger features are next.
 
 ---
 
@@ -35,7 +35,7 @@ you've scraped.
 - **Ledger of every scrape**: status, timing, content hash, and stored output
 - **Setup wizard**: pick SQLite or PostgreSQL and local or S3-compatible storage on first run
 - **Metrics dashboard**: success rate, latency, volume, plus Prometheus and Grafana
-- **REST API**: documented with OpenAPI at `/docs`
+- **REST API**: scrape endpoint and health check, documented with OpenAPI at `/docs`
 - **MCP server**: let Claude and other AI tools scrape through Distill
 - **Crawl, map, and batch**: scrape whole sites with scope and politeness rules
 - **Safe by default**: SSRF protection, robots.txt support, size and redirect limits
@@ -43,23 +43,42 @@ you've scraped.
 
 ## Quick start
 
-> Not runnable yet. This is the intended workflow once Phase 1 and 2 land.
-
 ```bash
 git clone https://github.com/cmspeedau/Distill.git
 cd Distill
-cp .env.example .env
 uv sync
 uv run uvicorn app.main:app --reload     # API on :8000
-cd frontend && npm install && npm run dev  # UI on :5173
 ```
 
-## Usage (target design)
+In another terminal, run the development UI:
+
+```bash
+cd frontend
+npm ci
+npm run dev                                # UI on :5173
+```
+
+You can also scrape from the CLI:
+
+```bash
+uv run python -m app.cli scrape https://example.com
+```
+
+## Usage
 
 ### CLI
 
+Scrape a page and print its extracted Markdown:
+
 ```bash
-python -m app.cli scrape https://example.com
+uv run python -m app.cli scrape https://example.com
+```
+
+Use `--include-images` to include extracted images, or `--json` to print metadata, links, Markdown, cleaned HTML, and the content hash:
+
+```bash
+uv run python -m app.cli scrape https://example.com --include-images
+uv run python -m app.cli scrape https://example.com --json
 ```
 
 ### REST API
@@ -74,13 +93,13 @@ curl -X POST http://localhost:8000/scrape \
 |---|---|
 | `POST /scrape` | Scrape a URL and return the result |
 | `GET /health` | Health check |
-| `GET /metrics` | Prometheus metrics (Phase 6b) |
+| `GET /metrics` | Prometheus metrics (Phase 8) |
 
-The ledger endpoints arrive with Phase 3 and 5. See [ROADMAP.md](ROADMAP.md).
+The ledger endpoints arrive in Phase 3. See [ROADMAP.md](ROADMAP.md).
 
 ## Configuration
 
-Settings are read from environment variables and a bootstrap config file in one place (`app/config.py`). See [`.env.example`](.env.example) for the current list.
+Settings are read from environment variables in one place (`app/config.py`). See [`.env.example`](.env.example) for the current list.
 
 ## Architecture
 
